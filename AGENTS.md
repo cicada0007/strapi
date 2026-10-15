@@ -196,6 +196,45 @@ E2E (`yarn test:e2e`) is required per CONTRIBUTING.md but slow — CI enforces i
 
 ---
 
+### External agent pre-verification blueprint
+
+This opt-in workflow helps contributors verify agent-generated changes before opening a PR.
+It supplements the checks above and [CONTRIBUTING.md](CONTRIBUTING.md); it does not replace CI
+or require a particular agent framework or sandbox provider.
+
+1. Create a dedicated worktree from `develop`. Keep unrelated work out of it. A worktree
+   separates Git state; it is not a security boundary. For untrusted execution, use an isolated
+   sandbox with explicit contributor approval before uploading code or providing credentials.
+2. Bootstrap the worktree using the instructions above. Install Playwright browsers with
+   `yarn playwright install chromium webkit`. Provision any required OS libraries in the
+   sandbox image; report missing dependencies rather than silently skipping E2E tests.
+   Follow the E2E setup documentation for EE licensing. Never commit license files or secrets.
+3. Run these four gates sequentially from the repository root, stopping on the first failure:
+
+   ```bash
+   yarn lint &&
+     yarn test:unit &&
+     yarn test:front &&
+     yarn test:e2e --setup --concurrency=1
+   ```
+
+4. Also run `yarn test:ts` and `yarn prettier:check`, as required by the pre-PR checklist,
+   plus any integration or package-specific checks relevant to the change.
+5. Keep failures with the contributor: save redacted logs, report the failing command, and
+   stop after a bounded retry budget agreed with the contributor. Do not disable tests,
+   weaken assertions, or update snapshots solely to obtain a passing result. A timeout,
+   missing dependency, or skipped suite is a blocked check, not a pass.
+6. Before creating even a draft PR, record the verified commit SHA, environment, commands,
+   exit codes, and any coverage limitations. If code changes after verification, rerun the
+   affected checks and all four gates on the final revision. Include a concise verification
+   summary in the existing PR template without committing generated reports or credentials.
+
+An agent runner must implement any PR-creation guard itself; this Markdown file cannot
+technically enforce one. Successful sandbox checks are evidence for the tested revision
+and environment, not a guarantee that GitHub Actions or maintainer review will pass.
+
+---
+
 ## Quality Gates
 
 ### Commits
